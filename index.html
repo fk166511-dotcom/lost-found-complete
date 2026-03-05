@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔍 Lost & Found — AI Face Match</title>
+<style>
+:root{--red:#e53935;--green:#2e7d32;--navy:#0d1b4b;--gold:#f9a825;--bg:#f0f4ff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:var(--bg);min-height:100vh}
+.header{background:linear-gradient(135deg,#0d1b4b,#1a237e);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-title{font-size:1.2rem;font-weight:800}
+.header-sub{font-size:0.7rem;opacity:.75}
+.admin-btn{background:#f9a825;color:#0d1b4b;border:none;padding:8px 16px;border-radius:20px;font-weight:700;cursor:pointer}
+.tabs{display:flex;background:white;border-bottom:1px solid #eee}
+.tab{flex:1;padding:14px 10px;text-align:center;cursor:pointer;font-weight:700;border:none;background:none;color:#999;border-bottom:3px solid transparent}
+.tab.active-lost{color:var(--red);border-bottom-color:var(--red);background:#fff5f5}
+.tab.active-found{color:var(--green);border-bottom-color:var(--green);background:#f5fff5}
+.section{padding:16px;max-width:480px;margin:0 auto}
+.card{background:white;border-radius:14px;padding:18px;box-shadow:0 2px 16px rgba(0,0,0,.1)}
+.photo-box{border:2px dashed #90caf9;border-radius:10px;padding:20px;text-align:center;cursor:pointer;position:relative;margin-bottom:12px;background:#f8fbff}
+.photo-box input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.photo-preview{width:90px;height:90px;border-radius:50%;object-fit:cover;margin:0 auto 6px;display:block;border:3px solid var(--green)}
+label{display:block;font-size:.85rem;font-weight:600;margin:10px 0 3px}
+input[type=text],input[type=tel],input[type=password],textarea{width:100%;padding:11px;border:1.5px solid #ddd;border-radius:8px;font-size:.9rem}
+.btn{width:100%;padding:13px;margin-top:14px;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer}
+.btn-lost{background:var(--red);color:white}
+.btn-found{background:var(--green);color:white}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
+.box{background:white;border-radius:20px;padding:22px;max-width:360px;width:100%;max-height:90vh;overflow-y:auto}
+.spinner{width:56px;height:56px;border-radius:50%;border:5px solid rgba(255,255,255,.2);border-top-color:#f9a825;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:white;font-size:1rem;font-weight:700;text-align:center}
+.loading-sub{color:rgba(255,255,255,.6);font-size:.8rem;text-align:center;margin-top:6px}
+.faces{display:flex;align-items:center;justify-content:center;gap:0;margin:16px 0}
+.face-img{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #a5d6a7;background:#eee}
+.vs{width:40px;height:40px;border-radius:50%;background:#fff8e1;border:2px solid #ffe082;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;color:#f9a825;margin:0 -4px;z-index:2}
+.banner{border-radius:10px;padding:10px;text-align:center;font-weight:700;margin:10px 0}
+.banner.high{background:#f1fdf4;color:var(--green);border:1.5px solid #a5d6a7}
+.banner.low{background:#fff3e0;color:#e65100;border:1.5px solid #ffcc80}
+.info-table{background:#f9f9f9;border-radius:10px;margin:10px 0}
+.info-row{display:flex;justify-content:space-between;padding:9px 14px;border-bottom:1px solid #f0f0f0;font-size:.85rem}
+.info-row:last-child{border:none}
+.info-left{color:#888}
+.info-right{font-weight:700}
+.contact-box{background:#f1fdf4;border:1.5px solid #a5d6a7;border-radius:12px;padding:12px;text-align:center;margin:12px 0}
+.phone-num{font-size:1.5rem;font-weight:800;color:var(--green)}
+.btn-confirm{background:#0d1b4b;color:white;width:100%;padding:12px;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-top:8px}
+.btn-cancel{background:#f0f0f0;color:#666;width:100%;padding:10px;border:none;border-radius:10px;cursor:pointer;margin-top:6px}
+.success-icon{font-size:3rem;text-align:center;margin-bottom:8px}
+.success-title{font-size:1.1rem;font-weight:800;color:var(--green);text-align:center}
+.success-sub{font-size:.83rem;color:#666;text-align:center;margin:6px 0 16px}
+.btn-ok{background:#0d1b4b;color:white;border:none;padding:11px 28px;border-radius:8px;font-weight:700;cursor:pointer}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.admin-title{color:white;font-size:1rem;font-weight:800}
+.logout{background:rgba(255,255,255,.15);color:white;border:none;padding:7px 14px;border-radius:16px;cursor:pointer}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.stat{background:rgba(255,255,255,.1);border-radius:10px;padding:12px;text-align:center}
+.stat-n{font-size:1.8rem;font-weight:800}
+.stat-n.r{color:#ef9a9a}.stat-n.g{color:#a5d6a7}.stat-n.o{color:#f9a825}
+.stat-l{color:rgba(255,255,255,.5);font-size:.68rem}
+.atabs{display:flex;gap:6px;margin-bottom:12px}
+.atab{flex:1;padding:9px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:.78rem}
+.atab.on{background:white;color:#0d1b4b}
+.atab.off{background:rgba(255,255,255,.14);color:white}
+.rcard{background:rgba(255,255,255,.95);border-radius:10px;padding:10px;display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.rimg{width:50px;height:50px;border-radius:50%;object-fit:cover;background:#ddd;flex-shrink:0}
+.rinfo{flex:1;min-width:0}
+.rname{font-weight:700;font-size:.85rem;color:#0d1b4b}
+.rdetail{font-size:.72rem;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rphone{font-size:.78rem;font-weight:600;color:var(--green)}
+.rbadge{font-size:.65rem;padding:3px 7px;border-radius:6px;font-weight:700;flex-shrink:0}
+.rbadge.lost{background:#ffebee;color:var(--red)}
+.rbadge.found{background:#e8f5e9;color:var(--green)}
+.rbadge.matched{background:#fff8e1;color:#e65100}
+.empty{text-align:center;padding:30px;color:rgba(255,255,255,.35)}
+.clear-btn{width:100%;padding:12px;background:#b71c1c;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:14px}
+.hidden{display:none!important}
+.warn{background:#fff3e0;border-radius:6px;padding:7px 10px;font-size:.75rem;color:#e65100;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><div class="header-title">🔍 Lost & Found</div><div class="header-sub">AI Face Match System</div></div>
+  <button class="admin-btn" onclick="openAdmin()">🛡️ Admin</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active-lost" id="tabLost" onclick="switchTab('lost')">😢 Lost Person</button>
+  <button class="tab" id="tabFound" onclick="switchTab('found')">🤝 Found Person</button>
+</div>
+
+<!-- LOST FORM -->
+<div class="section" id="secLost">
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:12px">😢 खोए हुए व्यक्ति की जानकारी</div>
+    <div class="photo-box" id="lostBox">
+      <input type="file" accept="image/*" onchange="pickPhoto('lost',this)">
+      <div id="lostDefault">📷<br><small>Photo Upload करें</small></div>
+      <img id="lostPrev" class="photo-preview hidden" src="" alt="">
+    </div>
+    <div class="warn">⚠️ Photo जरूरी है — AI Face Match के लिए</div>
+    <label>नाम *</label><input type="text" id="lN" placeholder="जैसे: Ramesh Kumar">
+    <label>पता *</label><input type="text" id="lA" placeholder="घर का पूरा पता">
+    <label>मोबाइल *</label><input type="tel" id="lP" placeholder="10 अंक" maxlength="10">
+    <label>Last Location</label><input type="text" id="lL" placeholder="जैसे: Railway Station">
+    <label>अतिरिक्त जानकारी</label><textarea id="lD" placeholder="कोई और जानकारी..."></textarea>
+    <button class="btn btn-lost" onclick="doLost()">📋 Submit — Lost Person</button>
+  </div>
+</div>
+
+<!-- FOUND FORM -->
+<div class="section hidden" id="secFound">
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:12px">🤝 मिले हुए व्यक्ति की जानकारी</div>
+    <div class="photo-box" id="foundBox">
+      <input type="file" accept="image/*" onchange="pickPhoto('found',this)">
+      <div id="foundDefault">📷<br><small>Photo Upload करें</small></div>
+      <img id="foundPrev" class="photo-preview hidden" src="" alt="">
+    </div>
+    <div class="warn">⚠️ Photo जरूरी है — AI Face Match के लिए</div>
+    <label>नाम (Optional)</label><input type="text" id="fN" placeholder="पता नहीं तो खाली छोड़ें">
+    <label>आपका मोबाइल *</label><input type="tel" id="fP" placeholder="10 अंक" maxlength="10">
+    <label>कहां मिला? *</label><input type="text" id="fA" placeholder="जगह का पूरा पता">
+    <label>अतिरिक्त जानकारी</label><textarea id="fD" placeholder="कोई और जानकारी..."></textarea>
+    <button class="btn btn-found" onclick="doFound()">🤝 Submit — Found Person</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="overlay hidden" id="loading">
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadTxt">Processing...</div>
+    <div class="loading-sub" id="loadSub">कृपया wait करें</div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="overlay hidden" id="successDiv">
+  <div class="box" style="text-align:center">
+    <div class="success-icon" id="sIco">✅</div>
+    <div class="success-title" id="sTit">Done!</div>
+    <div class="success-sub" id="sSub"></div>
+    <button class="btn-ok" onclick="hide('successDiv')">ठीक है</button>
+  </div>
+</div>
+
+<!-- MATCH POPUP -->
+<div class="overlay hidden" id="matchDiv">
+  <div class="box">
+    <div style="text-align:center;font-weight:800;font-size:1.1rem;margin-bottom:14px">🔍 Match Result</div>
+    <div class="faces">
+      <img class="face-img" id="mLostImg" src="" alt="">
+      <div class="vs">VS</div>
+      <img class="face-img" id="mFoundImg" src="" alt="">
+    </div>
+    <div class="banner" id="mBanner"></div>
+    <div class="info-table">
+      <div class="info-row"><span class="info-left">😢 Lost</span><span class="info-right" id="mLostName">--</span></div>
+      <div class="info-row"><span class="info-left">🤝 Found</span><span class="info-right" id="mFoundName">--</span></div>
+      <div class="info-row"><span class="info-left">📍 कहाँ मिला</span><span class="info-right" id="mAddr">--</span></div>
+      <div class="info-row"><span class="info-left">🤖 Score</span><span class="info-right" id="mScore">--%</span></div>
+    </div>
+    <div class="contact-box">
+      <div style="font-size:.8rem;color:#555;margin-bottom:4px">📞 संपर्क करें:</div>
+      <div class="phone-num" id="mPhone">--</div>
+    </div>
+    <button class="btn-confirm" onclick="confirmMatch()">✓ ठीक है — यही है!</button>
+    <button class="btn-cancel" onclick="cancelMatch()">✗ Match सही नहीं</button>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div class="overlay hidden" id="adminLogin">
+  <div class="box" style="text-align:center">
+    <div style="font-size:2.5rem;margin-bottom:8px">🛡️</div>
+    <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">Admin Login</div>
+    <div style="font-size:.8rem;color:#777;margin-bottom:14px">6-digit PIN डालें</div>
+    <input type="password" id="pinIn" style="font-size:1.5rem;letter-spacing:8px;text-align:center;margin-bottom:6px" maxlength="6" placeholder="••••••">
+    <div style="color:red;font-size:.8rem;min-height:18px;margin-bottom:10px" id="pinErr"></div>
+    <button class="btn btn-lost" style="margin-top:0" onclick="checkPin()">🔓 Login</button>
+    <button style="margin-top:8px;width:100%;padding:10px;background:#f0f0f0;color:#666;border:none;border-radius:8px;cursor:pointer" onclick="hide('adminLogin')">Cancel</button>
+  </div>
+</div>
+
+<!-- ADMIN DASH -->
+<div style="position:fixed;inset:0;background:#0d1b4b;z-index:600;overflow-y:auto;padding:18px;display:none" id="adminDash">
+  <div class="admin-header">
+    <div class="admin-title">🛡️ Admin Dashboard</div>
+    <button class="logout" onclick="document.getElementById('adminDash').style.display='none'">Logout</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n r" id="stL">0</div><div class="stat-l">Lost</div></div>
+    <div class="stat"><div class="stat-n g" id="stF">0</div><div class="stat-l">Found</div></div>
+    <div class="stat"><div class="stat-n o" id="stM">0</div><div class="stat-l">Matched</div></div>
+  </div>
+  <div class="atabs">
+    <button class="atab on" id="atL" onclick="aTab('lost')">😢 Lost</button>
+    <button class="atab off" id="atF" onclick="aTab('found')">🤝 Found</button>
+    <button class="atab off" id="atM" onclick="aTab('matched')">✅ Matched</button>
+  </div>
+  <div id="aList"></div>
+  <button class="clear-btn" onclick="clearAll()">🗑️ सभी Data हटाएं</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAMqG2LBYaEmoGtglV0tX58oDx62eJSkL4",
+  authDomain: "lost-found-ai-5c879.firebaseapp.com",
+  projectId: "lost-found-ai-5c879",
+  storageBucket: "lost-found-ai-5c879.firebasestorage.app",
+  messagingSenderId: "1010075660037",
+  appId: "1:1010075660037:web:73bde0fee724faa448516c"
+});
+
+const db = getFirestore(app);
+window._db = db;
+window._col = (n) => collection(db, n);
+window._add = (n, d) => addDoc(collection(db, n), d);
+window._get = async (n) => { const s = await getDocs(collection(db, n)); return s.docs.map(d=>({_id:d.id,...d.data()})); };
+window._upd = (n, id, d) => updateDoc(doc(db, n, id), d);
+window._del = (n, id) => deleteDoc(doc(db, n, id));
+
+// Live stats
+onSnapshot(collection(db,'lost'),    s=>{ const e=document.getElementById('stL'); if(e) e.textContent=s.size; });
+onSnapshot(collection(db,'found'),   s=>{ const e=document.getElementById('stF'); if(e) e.textContent=s.size; });
+onSnapshot(collection(db,'matched'), s=>{ const e=document.getElementById('stM'); if(e) e.textContent=s.size; });
+
+window._ready = true;
+console.log('Firebase ready!');
+</script>
+
+<script>
+const VERCEL = 'https://lost-found-complete-lyart.vercel.app';
+const PIN    = '578500';
+const THRESH = 60;
+
+let lostB64=null, foundB64=null, foundURL=null, pending=null, curTab='lost', bestScore=0, bestMatch=null;
+
+function show(id){ document.getElementById(id).classList.remove('hidden'); }
+function hide(id){ document.getElementById(id).classList.add('hidden'); }
+function $(id){ return document.getElementById(id); }
+
+function switchTab(t) {
+  curTab = t;
+  t==='lost' ? show('secLost') : hide('secLost');
+  t==='found' ? show('secFound') : hide('secFound');
+  $('tabLost').className = 'tab ' + (t==='lost' ? 'active-lost' : '');
+  $('tabFound').className = 'tab ' + (t==='found' ? 'active-found' : '');
+}
+
+function pickPhoto(type, input) {
+  if(!input.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const d = e.target.result;
+    if(type==='lost') {
+      lostB64 = d;
+      $('lostDefault').classList.add('hidden');
+      $('lostPrev').src = d;
+      $('lostPrev').classList.remove('hidden');
+    } else {
+      foundB64 = d;
+      $('foundDefault').classList.add('hidden');
+      $('foundPrev').src = d;
+      $('foundPrev').classList.remove('hidden');
+    }
+  };
+  r.readAsDataURL(input.files[0]);
+}
+
+function setLoad(txt, sub) {
+  $('loadTxt').textContent = txt;
+  $('loadSub').textContent = sub;
+  show('loading');
+}
+
+async function uploadPhoto(b64, folder) {
+  try {
+    const r = await fetch(VERCEL+'/api/upload', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({image_base64: b64, folder: folder})
+    });
+    const d = await r.json();
+    if(d.url) return d.url;
+    console.error('Upload error:', d.error);
+    return b64;
+  } catch(e) {
+    console.error('Upload failed:', e);
+    return b64;
+  }
+}
+
+async function faceMatch(url1, url2) {
+  try {
+    const isU1 = url1 && url1.startsWith('http');
+    const isU2 = url2 && url2.startsWith('http');
+    const body = (isU1 && isU2)
+      ? {img1_url: url1, img2_url: url2}
+      : {img1_base64: url1, img2_base64: url2};
+    const r = await fetch(VERCEL+'/api/match', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    console.log('Match score:', d.score, d.error||'');
+    return d.score || 0;
+  } catch(e) {
+    console.error('Match error:', e);
+    return 0;
+  }
+}
+
+async function waitDB() {
+  let tries = 0;
+  while(!window._ready && tries < 30) {
+    await new Promise(r => setTimeout(r, 200));
+    tries++;
+  }
+  if(!window._ready) throw new Error('Firebase not loaded!');
+}
+
+// SUBMIT LOST
+async function doLost() {
+  const name  = $('lN').value.trim();
+  const addr  = $('lA').value.trim();
+  const phone = $('lP').value.trim();
+  const loc   = $('lL').value.trim();
+  const desc  = $('lD').value.trim();
+
+  if(!name)           return alert('नाम भरना जरूरी है!');
+  if(!addr)           return alert('पता भरना जरूरी है!');
+  if(phone.length<10) return alert('सही 10 अंक का नंबर डालें!');
+  if(!lostB64)        return alert('Photo जरूरी है!');
+
+  setLoad('📤 Photo Upload हो रहा है...', 'Cloudinary पर upload हो रहा है');
+
+  try {
+    await waitDB();
+    const photoURL = await uploadPhoto(lostB64, 'lost');
+
+    setLoad('💾 Data Save हो रहा है...', 'Firebase पर save हो रहा है');
+
+    await window._add('lost', {
+      name, addr, phone, loc, desc, photoURL,
+      status: 'pending',
+      time: new Date().toLocaleString('hi-IN'),
+      id: Date.now()
+    });
+
+    hide('loading');
+    $('sIco').textContent='✅'; $('sTit').textContent='Saved!'; $('sSub').textContent='Lost person की जानकारी save हो गई।';
+    show('successDiv');
+
+    // Reset
+    $('lN').value=$('lA').value=$('lP').value=$('lL').value=$('lD').value='';
+    lostB64=null; $('lostPrev').classList.add('hidden'); $('lostDefault').classList.remove('hidden');
+
+  } catch(e) {
+    hide('loading');
+    alert('Error: '+e.message);
+  }
+}
+
+// SUBMIT FOUND
+async function doFound() {
+  const phone = $('fP').value.trim();
+  const addr  = $('fA').value.trim();
+  const name  = $('fN').value.trim() || 'अज्ञात';
+  const desc  = $('fD').value.trim();
+
+  if(phone.length<10) return alert('आपका सही 10 अंक का नंबर डालें!');
+  if(!addr)           return alert('पता भरना जरूरी है!');
+  if(!foundB64)       return alert('Photo जरूरी है!');
+
+  setLoad('📤 Photo Upload हो रहा है...', 'Cloudinary पर upload हो रहा है');
+
+  try {
+    await waitDB();
+
+    // Upload found photo
+    foundURL = await uploadPhoto(foundB64, 'found');
+
+    // Get lost records
+    setLoad('🤖 AI Face Match हो रहा है...', 'Lost photos से compare हो रहा है');
+    const lostRecs = await window._get('lost');
+    const pending_lost = lostRecs.filter(r => r.status === 'pending');
+
+    console.log('Lost records found:', pending_lost.length);
+
+    let best = null; bestScore = 0;
+    for(const lost of pending_lost) {
+      if(!lost.photoURL) continue;
+      const score = await faceMatch(lost.photoURL, foundURL);
+      console.log('Comparing with', lost.name, '- score:', score);
+      if(score > bestScore) { bestScore = score; best = lost; }
+    }
+
+    hide('loading');
+    console.log('Best score:', bestScore, 'threshold:', THRESH);
+
+    const foundRecord = { name, addr, phone, desc, photoURL: foundURL, status:'pending', time: new Date().toLocaleString('hi-IN'), id: Date.now() };
+
+    if(bestScore >= THRESH && best) {
+      best.matchScore = bestScore;
+      bestMatch = best;
+      pending = { lost: best, found: foundRecord };
+      showMatch(best, foundRecord, bestScore);
+    } else {
+      await window._add('found', foundRecord);
+      $('sIco').textContent='🤝'; $('sTit').textContent='Saved!'; $('sSub').textContent='Match नहीं मिला। Data save हो गया।';
+      show('successDiv');
+      resetFound();
+    }
+  } catch(e) {
+    hide('loading');
+    alert('Error: '+e.message);
+  }
+}
+
+function showMatch(lost, found, score) {
+  $('mLostImg').src  = lost.photoURL || '';
+  $('mFoundImg').src = foundURL || '';
+  $('mLostName').textContent  = lost.name || '--';
+  $('mFoundName').textContent = found.name || 'अज्ञात';
+  $('mAddr').textContent      = found.addr || '--';
+  $('mPhone').textContent     = lost.phone || '--';
+  $('mScore').textContent     = score + '%';
+
+  const b = $('mBanner');
+  b.className = 'banner ' + (score >= 80 ? 'high' : 'low');
+  b.textContent = score >= 80 ? `✅ MATCH मिला! (${score}%) — यही है!` : `⚠️ POSSIBLE MATCH (${score}%) — confirm करें`;
+
+  show('matchDiv');
+}
+
+async function confirmMatch() {
+  if(!pending) return;
+  setLoad('✅ Match Confirm हो रहा है...', '');
+  try {
+    await waitDB();
+    if(pending.lost._id) await window._upd('lost', pending.lost._id, {status:'matched'});
+    await window._add('found', {...pending.found, status:'matched'});
+    await window._add('matched', {
+      lostName: pending.lost.name, lostPhone: pending.lost.phone,
+      foundAddr: pending.found.addr, foundPhone: pending.found.phone,
+      lostPhoto: pending.lost.photoURL, foundPhoto: foundURL,
+      score: pending.lost.matchScore||bestScore, time: new Date().toLocaleString('hi-IN')
+    });
+  } catch(e) { console.error(e); }
+  hide('loading'); hide('matchDiv');
+  pending = null;
+  $('sIco').textContent='🎉'; $('sTit').textContent='Match Confirmed!'; $('sSub').textContent='परिवार मिल गया! 🎊';
+  show('successDiv');
+  resetFound();
+}
+
+async function cancelMatch() {
+  hide('matchDiv');
+  if(pending) {
+    try { await waitDB(); await window._add('found', pending.found); } catch(e){}
+    pending = null;
+  }
+  resetFound();
+}
+
+function resetFound() {
+  $('fN').value=$('fP').value=$('fA').value=$('fD').value='';
+  foundB64=null; foundURL=null;
+  $('foundPrev').classList.add('hidden');
+  $('foundDefault').classList.remove('hidden');
+}
+
+// ADMIN
+function openAdmin() { show('adminLogin'); $('pinIn').value=''; $('pinErr').textContent=''; }
+function checkPin() {
+  if($('pinIn').value === PIN) {
+    hide('adminLogin');
+    document.getElementById('adminDash').style.display = 'block';
+    aTab('lost');
+  } else {
+    $('pinErr').textContent = '❌ गलत PIN!';
+    $('pinIn').value = '';
+  }
+}
+$('pinIn').addEventListener('keydown', e=>{ if(e.key==='Enter') checkPin(); });
+
+let curATab = 'lost';
+async function aTab(t) {
+  curATab = t;
+  ['L','F','M'].forEach(x => {
+    $('at'+x).className = 'atab ' + ({'L':'lost','F':'found','M':'matched'}[x]===t ? 'on' : 'off');
+  });
+  await renderAdmin();
+}
+
+async function renderAdmin() {
+  const list = $('aList');
+  list.innerHTML = '<div class="empty">⏳ Loading...</div>';
+  try {
+    await waitDB();
+    const recs = await window._get(curATab);
+    if(!recs.length) { list.innerHTML='<div class="empty">📭 कोई record नहीं</div>'; return; }
+    list.innerHTML = recs.reverse().map(r=>`
+      <div class="rcard">
+        <img class="rimg" src="${r.photoURL||r.lostPhoto||''}" alt="" onerror="this.style.opacity='.2'">
+        <div class="rinfo">
+          <div class="rname">${r.name||r.lostName||'?'}</div>
+          <div class="rdetail">${r.addr||r.lostAddr||''}</div>
+          <div class="rphone">📞 ${r.phone||r.lostPhone||''}</div>
+          <div class="rdetail">${r.time||''}</div>
+        </div>
+        <span class="rbadge ${curATab}">${curATab}</span>
+      </div>`).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty">❌ Error: '+e.message+'</div>';
+  }
+}
+
+async function clearAll() {
+  if(!confirm('सभी data delete करें?')) return;
+  await waitDB();
+  for(const col of ['lost','found','matched']) {
+    const recs = await window._get(col);
+    for(const r of recs) await window._del(col, r._id);
+  }
+  renderAdmin();
+}
+</script>
+</body>
+</html>
